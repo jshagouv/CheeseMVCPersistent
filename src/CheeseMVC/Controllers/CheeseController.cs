@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using CheeseMVC.Models;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using CheeseMVC.Models;
 using CheeseMVC.ViewModels;
 using CheeseMVC.Data;
 using System.Linq;
@@ -19,14 +20,16 @@ namespace CheeseMVC.Controllers
         // GET: /<controller>/
         public IActionResult Index()
         {
-            List<Cheese> cheeses = context.Cheeses.ToList();
+            //In addition to getting cheeses list, also get associated
+            //categories for each cheese in list (using Linq syntax)
+            IList<Cheese> cheeses = context.Cheeses.Include(c => c.Category).ToList();
 
             return View(cheeses);
         }
 
         public IActionResult Add()
         {
-            AddCheeseViewModel addCheeseViewModel = new AddCheeseViewModel();
+            AddCheeseViewModel addCheeseViewModel = new AddCheeseViewModel(context.Categories.ToList());
             return View(addCheeseViewModel);
         }
 
@@ -35,12 +38,15 @@ namespace CheeseMVC.Controllers
         {
             if (ModelState.IsValid)
             {
+                //Use Linq syntax to retrieve a specific category ID... so when form 
+                //is submitted, CategoryID from the form should correspond to an ID from the Categories DB table
+                CheeseCategory newCheeseCategory = context.Categories.Single(c => c.ID == addCheeseViewModel.CategoryID);
                 // Add the new cheese to my existing cheeses
                 Cheese newCheese = new Cheese
                 {
                     Name = addCheeseViewModel.Name,
                     Description = addCheeseViewModel.Description,
-                    Type = addCheeseViewModel.Type
+                    Category = newCheeseCategory
                 };
 
                 context.Cheeses.Add(newCheese);
@@ -71,6 +77,33 @@ namespace CheeseMVC.Controllers
             context.SaveChanges();
 
             return Redirect("/");
+        }
+
+        //Display all cheeses within a given category
+        public IActionResult Category (int id)
+        {
+            if (id == 0)
+            {
+                return Redirect("/Category");
+            }
+
+            CheeseCategory theCategory = context.Categories
+                .Include(cat => cat.Cheeses)
+                .Single(cat => cat.ID == id);
+
+            //Alternate way to achieve the same result by querying for the cheeses
+            //from the other side of the relationship (i.e., start with list of cheeses
+            //and filter down to the ones with the proper category ID). But this way
+            //makes it harder to get Category Name.
+            /*
+             * IList<Cheese> theCheeses = context.Cheeses
+             * .Include(c => c.Category)
+             * .Where(c => c.CategoryID == id)
+             * .ToList();
+            */
+
+            ViewBag.title = "Cheeses in category: " + theCategory.Name;
+            return View("Index", theCategory.Cheeses);
         }
     }
 }
