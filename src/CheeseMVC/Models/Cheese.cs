@@ -1,4 +1,6 @@
-﻿namespace CheeseMVC.Models
+﻿using System.Collections.Generic;
+
+namespace CheeseMVC.Models
 {
     public class Cheese
     {
@@ -13,5 +15,10 @@
         //foreign key; the key is what is stored in the DB but
         //this is the object that corresponds to that key:
         public CheeseCategory Category { get; set; }
+
+        //A list of the joining CheeseMenu objects (i.e., composite IDs)
+        //Originally started as just list (how it appeared in video)
+        //assignment instruction said to use IList
+        public IList<CheeseMenu> CheeseMenus { get; set; }
     }
 }
